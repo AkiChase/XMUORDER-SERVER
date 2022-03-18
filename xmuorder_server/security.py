@@ -3,9 +3,14 @@
 1. 简单代码验证
 ...
 """
+from pydantic import BaseModel
 
 
-def code_verify(code: str):
+class CodeVerifyModel(BaseModel):
+    code: str
+
+
+def code_verify(code: str) -> bool:
     """
     简单代码验证
     """
