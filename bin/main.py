@@ -1,26 +1,23 @@
 from fastapi import FastAPI
 
-from xmuorder_server import config, database
+# 添加项目路径进入环境变量，防止找不到模块
+import sys
+import os
+
+sys.path.append(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0])
+
+from xmuorder_server import config
+from xmuorder_server.database import Mysql
 from xmuorder_server.routers import sms
 
 app = FastAPI()
+#   短信相关 路由
 app.include_router(sms.router, prefix="/sms")
 
 config.GlobalSettings.init(_env_file='.env')
 settings = config.GlobalSettings.get()
 
-db = database.Mysql(**settings.dict())
-
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.post("/")
-async def root():
-    return {"message": "Hello World"}
-
+Mysql.init(**settings.dict())
 
 if __name__ == "__main__":
     import uvicorn
