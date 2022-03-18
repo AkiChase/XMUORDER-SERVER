@@ -14,7 +14,7 @@ app = FastAPI()
 #   短信相关 路由
 app.include_router(sms.router, prefix="/sms")
 
-config.GlobalSettings.init(_env_file='.env')
+config.GlobalSettings.init(_env_file='../.env')
 settings = config.GlobalSettings.get()
 
 Mysql.init(**settings.dict())
