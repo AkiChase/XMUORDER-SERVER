@@ -27,10 +27,10 @@ class SendSmsModel(BaseModel):
 
 
 @router.post("/send")
-async def send_sms(item: SendSmsModel, verify=Depends(dependencies.code_verify_depend)):
+async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_aes_depend)):
     conn = Mysql.connect()
 
-    cid_list = [f"'{x}'" for x in item.cID_list]
+    cid_list = [f"'{x}'" for x in data.cID_list]
     for x in cid_list:
         if x.find(' ') > -1:
             raise HTTPException(status_code=400, detail="cid_list invalid")
@@ -53,7 +53,7 @@ async def send_sms(item: SendSmsModel, verify=Depends(dependencies.code_verify_d
     Mysql.execute_only(conn, sql)
 
     #   发送短信
-    return send_message(list(phone_list), time1=item.time1, time2=item.time2)
+    return send_message(list(phone_list), time1=data.time1, time2=data.time2)
 
 
 def send_message(phone_list: List[str], time1: str, time2: str) -> models.SendSmsResponse:
@@ -83,11 +83,12 @@ def send_message(phone_list: List[str], time1: str, time2: str) -> models.SendSm
         # 模板 ID: 必须填写已审核通过的模板 ID。模板ID可登录 [短信控制台] 查看
         req.TemplateId = "1334610"
         # 模板参数: 若无模板参数，则设置为空
-        req.TemplateParamSet = [time1, time2]
+        req.TemplateParamSet = [str(time1), str(time2)]
         req.PhoneNumberSet = phone_list
 
         return client.SendSms(req)
 
     except TencentCloudSDKException as err:
-        print('错误信息', err)
+        print('错误信息')
+        print(err)
         raise HTTPException(status_code=400, detail="Message sending failed")
