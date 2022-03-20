@@ -8,13 +8,16 @@ class ErrorInfo:
     msg: str
     success: int = 0
     errno: Optional[int]
+    data: Optional[dict]
 
-    def __init__(self, msg: str, success: int = None, errno: int = None):
+    def __init__(self, msg: str, success: int = None, errno: int = None, data: dict = None):
         self.msg = msg
         if success is not None:
             self.success = success
         if errno is not None:
             self.errno = errno
+        if data is not None:
+            self.data = data
 
 
 class SuccessInfo:
@@ -23,8 +26,11 @@ class SuccessInfo:
     """
     msg: str
     success: int = 1
+    data: Optional[dict]
 
-    def __init__(self, msg: str, success: int = None):
+    def __init__(self, msg: str, success: int = None, data: dict = None):
         self.msg = msg
         if success is not None:
             self.success = success
+        if data is not None:
+            self.data = data

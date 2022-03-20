@@ -11,8 +11,6 @@ class Settings(BaseSettings):
     database_user: str
     database_password: str
     database_name: str
-    server_host: str
-    server_port: int
     secret_id: str
     secret_key: str
 

@@ -19,8 +19,14 @@ settings = config.GlobalSettings.get()
 
 Mysql.init(**settings.dict())
 
+
+@app.get('/')
+async def hello_world():
+    return 'Hello world'
+
+
 if __name__ == "__main__":
     import uvicorn
 
     # 使用命令行启动main.py，使用CTRL+C退出，保证数据库连接池正常关闭
-    uvicorn.run(app, host=settings.server_host, port=settings.server_port)
+    uvicorn.run(app, host='127.0.0.1', port=5716)

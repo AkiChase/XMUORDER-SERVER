@@ -11,6 +11,7 @@ from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentClo
 from tencentcloud.sms.v20210111 import sms_client, models
 
 from .. import dependencies
+from ..common import SuccessInfo
 from ..config import GlobalSettings
 from ..database import Mysql
 
@@ -56,7 +57,7 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
     return send_message(list(phone_list), time1=data.time1, time2=data.time2)
 
 
-def send_message(phone_list: List[str], time1: str, time2: str) -> models.SendSmsResponse:
+def send_message(phone_list: List[str], time1: str, time2: str) -> SuccessInfo:
     """
     使用模板发送商家及时处理订单短信提醒
     :param phone_list: 号码列表，注意每个号码+86
@@ -86,7 +87,8 @@ def send_message(phone_list: List[str], time1: str, time2: str) -> models.SendSm
         req.TemplateParamSet = [str(time1), str(time2)]
         req.PhoneNumberSet = phone_list
 
-        return client.SendSms(req)
+        res = client.SendSms(req)
+        return SuccessInfo(msg='短信请求发送成功', data={'SendStatusSet': res.SendStatusSet})
 
     except TencentCloudSDKException as err:
         print('错误信息')
