@@ -32,7 +32,7 @@ class LoginModel(BaseModel):
 
 
 @router.post("/bind")
-async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_depend)):
+async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_depend)):
     """
     通过统一身份认证账号密码绑定用户信息，储存至数据库，并返回基本信息
     """
@@ -62,7 +62,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_depe
                 info[key_dict[item['title']]] = item['initializationValue']['stringValue']
 
         # 以openid为 key, iv 加密
-        key = openid[0:17]
+        key = openid[0:16]
         iv = openid[-16:]
         en_pw = AES.encrypt_aes(key, iv, password)
 
@@ -78,39 +78,43 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_depe
 
         session.close()
 
+        print(f"{info['user_id']}绑定成功！")
         return SuccessInfo('bind success', data={
             'name': info['name'],
             'college': info['college'],
             'grade': info['grade'],
             'user_id': info['user_id']
-        })
+        }).to_dict()
 
     except Exception as e:
         print(e)
         session.close()
-        raise HTTPException(status_code=400, detail=ErrorInfo('bind failed'))
+        raise HTTPException(status_code=400, detail=ErrorInfo('bind failed').to_dict())
 
 
 @router.post("/login")
-async def xmu_login(data: LoginModel, verify=Depends(dependencies.code_verify_depend)):
+async def xmu_login(data: LoginModel, verify=Depends(dependencies.code_verify_aes_depend)):
     """
     通过openid读取数据库，返回用户信息
     """
     try:
         key = 'ord' + data.ts[0:11] + 'er_'
         iv = 're_' + data.ts[0:11] + 'dro'
-        openid = AES.encrypt_aes(key, iv, src=data.uid)
-        return SuccessInfo('login success', data=read_info(openid))
+        openid = AES.decrypt_aes(key, iv, en_src=data.uid)
+
+        data = read_info(openid)
+        print(f"{data['user_id']}绑定成功！")
+        return SuccessInfo('login success', data=data).to_dict()
 
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=400, detail=ErrorInfo('login failed'))
+        raise HTTPException(status_code=400, detail=ErrorInfo('login failed').to_dict())
 
 
 def read_info(openid: str) -> dict:
     conn = Mysql.connect()
     try:
-        sql = "select user_id, name, college, grade from user where openid = %(openid)s limit 1;"
+        sql = "select user_id, name, college, grade from user where openid = %(openid)s;"
         res = Mysql.execute_fetchone(conn, sql, openid=openid)
         return {
             'user_id': res[0],
@@ -121,7 +125,6 @@ def read_info(openid: str) -> dict:
     except Exception as e:
         raise Exception(e)
     finally:
-        conn.commit()
         conn.close()
 
 

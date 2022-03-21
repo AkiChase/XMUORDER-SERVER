@@ -19,6 +19,14 @@ class ErrorInfo:
         if data is not None:
             self.data = data
 
+    def to_dict(self):
+        out = {'msg': self.msg, 'success': self.success}
+        if hasattr(self, 'errno'):
+            out['errno'] = self.errno
+        if hasattr(self, 'data'):
+            out['data'] = self.data
+        return out
+
 
 class SuccessInfo:
     """
@@ -34,3 +42,9 @@ class SuccessInfo:
             self.success = success
         if data is not None:
             self.data = data
+
+    def to_dict(self):
+        out = {'msg': self.msg, 'success': self.success}
+        if hasattr(self, 'data'):
+            out['data'] = self.data
+        return out

@@ -8,11 +8,12 @@ sys.path.append(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0])
 
 from xmuorder_server import config
 from xmuorder_server.database import Mysql
-from xmuorder_server.routers import sms
+from xmuorder_server.routers import sms, xmu
 
 app = FastAPI()
 #   短信相关 路由
 app.include_router(sms.router, prefix="/sms")
+app.include_router(xmu.router, prefix="/xmu")
 
 config.GlobalSettings.init(_env_file='../.env')
 settings = config.GlobalSettings.get()

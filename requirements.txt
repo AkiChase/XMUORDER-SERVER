@@ -10,9 +10,11 @@ h11==0.13.0
 idna==3.3
 pycryptodome==3.14.1
 pydantic==1.9.0
+PyExecJS==1.5.1
 PyMySQL==1.0.2
 python-dotenv==0.19.2
 requests==2.27.1
+six==1.16.0
 sniffio==1.2.0
 starlette==0.17.1
 tencentcloud-sdk-python==3.0.601
