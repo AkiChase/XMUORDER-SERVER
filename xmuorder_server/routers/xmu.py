@@ -122,8 +122,6 @@ def read_info(openid: str) -> dict:
             'college': res[2],
             'grade': res[3]
         }
-    except Exception as e:
-        raise Exception(e)
     finally:
         conn.close()
 
@@ -139,7 +137,7 @@ def store_info(info: dict) -> None:
         insert into user (openid, user_id, account, pw, name, college, phone, grade)
         VALUES (%(openid)s, %(user_id)s, %(account)s, %(pw)s, %(name)s, %(college)s, %(phone)s, %(grade)s)
         ON DUPLICATE KEY UPDATE
-        openid=%(openid)s, user_id=%(user_id)s,
+        user_id=%(user_id)s,
         account=%(account)s, pw=%(pw)s,
         name=%(name)s, college=%(college)s,
         phone=%(phone)s, grade=%(grade)s;'''
