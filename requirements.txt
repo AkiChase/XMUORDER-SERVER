@@ -21,3 +21,6 @@ tencentcloud-sdk-python==3.0.601
 typing_extensions==4.1.1
 urllib3==1.26.9
 uvicorn==0.17.6
+
+loguru~=0.6.0
+APScheduler~=3.9.1

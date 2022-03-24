@@ -5,12 +5,15 @@ import requests
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from .. import dependencies, security
-from ..common import SuccessInfo, ErrorInfo
+from .. import dependencies
+from ..common import SuccessInfo, ErrorInfo, XMUORDERException
 from ..database import Mysql
+from ..logger import Logger
 from ..security import AES
 
 router = APIRouter()
+#   获取默认日志
+default_logger: Logger = Logger.get_logger('默认日志')
 
 
 class BindModel(BaseModel):
@@ -78,7 +81,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
 
         session.close()
 
-        print(f"{info['user_id']}绑定成功！")
+        default_logger.success("{name}:{id} 绑定成功!", name=info['name'], id=info['user_id'])
         return SuccessInfo('bind success', data={
             'name': info['name'],
             'college': info['college'],
@@ -87,7 +90,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
         }).to_dict()
 
     except Exception as e:
-        print(e)
+        default_logger.debug(f'XMU绑定失败-{e}')
         session.close()
         raise HTTPException(status_code=400, detail=ErrorInfo('bind failed').to_dict())
 
@@ -102,16 +105,19 @@ async def xmu_login(data: LoginModel, verify=Depends(dependencies.code_verify_ae
         iv = 're_' + data.ts[0:11] + 'dro'
         openid = AES.decrypt_aes(key, iv, en_src=data.uid)
 
-        data = read_info(openid)
-        print(f"{data['user_id']}绑定成功！")
-        return SuccessInfo('login success', data=data).to_dict()
+        user_data = read_info(openid)
+        default_logger.success("{name}:{id} 获取本地信息成功!", name=user_data['name'], id=user_data['user_id'])
+        return SuccessInfo('login success', data=user_data).to_dict()
 
     except Exception as e:
-        print(e)
+        default_logger.debug(f'XMU读取本地信息失败-{e}')
         raise HTTPException(status_code=400, detail=ErrorInfo('login failed').to_dict())
 
 
 def read_info(openid: str) -> dict:
+    """
+    读取本地用户信息
+    """
     conn = Mysql.connect()
     try:
         sql = "select user_id, name, college, grade from user where openid = %(openid)s;"
@@ -143,8 +149,6 @@ def store_info(info: dict) -> None:
         phone=%(phone)s, grade=%(grade)s;'''
 
         Mysql.execute_fetchall(conn, sql, **info)
-    except Exception as e:
-        raise Exception(e)
     finally:
         conn.commit()
         conn.close()
@@ -182,13 +186,15 @@ def login_by_pw(session: requests.Session, account: str, pw: str) -> requests.Re
     url = 'https://ids.xmu.edu.cn/authserver/login'
 
     res = session.get(url, timeout=5)
-    assert res.status_code == 200
+    if res.status_code != 200:
+        raise XMUORDERException('统一身份登录网页加载失败')
 
     info = {}
     for name in ('lt', 'dllt', 'execution', '_eventId', 'rmShown', 'pwdDefaultEncryptSalt'):
         key = 'name' if name != 'pwdDefaultEncryptSalt' else 'id'
         result = re.search(r'{}="{}" value="([\s\S]*?)"'.format(key, name), res.text)
-        assert result is not None, 'match failed'
+        if result is None:
+            raise XMUORDERException('正则获取统一身份登录网页参数失败')
         info[name] = result.group(1)
 
     with open(r'../lib/encrypt.js', 'r') as f:
@@ -208,7 +214,8 @@ def login_by_pw(session: requests.Session, account: str, pw: str) -> requests.Re
     }
 
     login_res = session.post(url, data=data)
-    assert login_res.status_code == 200
+    if login_res.status_code != 200:
+        raise XMUORDERException('统一身份登录失败')
     return login_res
 
 

@@ -50,8 +50,12 @@ class SuccessInfo:
 
 
 class XMUORDERException(Exception):
+    """
+    自定义异常
+    """
+
     def __init__(self, msg):
         self.msg = msg
 
     def __str__(self):
-        print(f'ERROR: {self.msg}')
+        return self.msg

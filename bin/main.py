@@ -9,16 +9,35 @@ sys.path.append(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0])
 from xmuorder_server import config
 from xmuorder_server.database import Mysql
 from xmuorder_server.routers import sms, xmu
+from xmuorder_server.logger import Logger
+from xmuorder_server.scheduler import Scheduler
 
 app = FastAPI()
-#   短信相关 路由
-app.include_router(sms.router, prefix="/sms")
-app.include_router(xmu.router, prefix="/xmu")
 
-config.GlobalSettings.init(_env_file='../.env')
-settings = config.GlobalSettings.get()
 
-Mysql.init(**settings.dict())
+@app.on_event("startup")
+async def init():
+    #   logger初始化
+    Logger.set_working_dir(os.path.abspath(os.path.join(__file__, '../../log')))
+    #   添加自定义logger
+    Logger('默认日志', level=Logger.Level.SUCCESS)
+
+    #   短信相关 路由
+    app.include_router(sms.router, prefix="/sms")
+    #   xmu绑定 路由
+    app.include_router(xmu.router, prefix="/xmu")
+
+    #   配置文件读取
+    config.GlobalSettings.init(_env_file='../.env')
+    settings = config.GlobalSettings.get()
+
+    #   Mysql连接
+    Mysql.init(**settings.dict())
+
+    #   scheduler初始化
+    Scheduler.init()
+    #   添加任务
+    # Scheduler.add(test, job_name='测试', trigger='cron', hour="20", minute="54", second='45')
 
 
 @app.get('/')
@@ -29,4 +48,5 @@ async def hello_world():
 if __name__ == "__main__":
     import uvicorn
 
+    # noinspection PyTypeChecker
     uvicorn.run(app, host='127.0.0.1', port=5716)

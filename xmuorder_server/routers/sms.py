@@ -15,8 +15,11 @@ from .. import dependencies
 from ..common import SuccessInfo, XMUORDERException
 from ..config import GlobalSettings
 from ..database import Mysql
+from ..logger import Logger
 
 router = APIRouter()
+#   获取默认日志
+default_logger: Logger = Logger.get_logger('默认日志')
 
 
 class SendSmsModel(BaseModel):
@@ -52,7 +55,7 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
         cid_list = [f"'{x}'" for x in data.cID_list]
         for x in cid_list:
             if x.find(' ') > -1:
-                raise HTTPException(status_code=400, detail="cid_list invalid")
+                raise XMUORDERException("cID列表异常")
 
         #   过滤出需要发送的电话号码
         sql = f'''
@@ -79,7 +82,7 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
                            data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except Exception as e:
-        print(e)
+        default_logger.debug(f'sms发送商家通知短信失败-{e}')
         raise HTTPException(status_code=400, detail="Message sending failed")
     finally:
         conn.close()
@@ -130,17 +133,17 @@ async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends
         res = send_verification_code(data.phone, code)
         conn.commit()
 
-        return SuccessInfo(msg='Verification code request success',
-                           data={'SendStatusSet': res}).to_dict()
-
         # return SuccessInfo(msg='Verification code request success',
-        #                    data={'SendStatusSet': res.SendStatusSet}).to_dict()
+        #                    data={'SendStatusSet': res}).to_dict()
+
+        return SuccessInfo(msg='Verification code request success',
+                           data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except XMUORDERException as e:
-        print(e.msg)
+        default_logger.debug(f'sms发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail=e.msg)
     except Exception as e:
-        print(e)
+        default_logger.debug(f'sms发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail="send phone verification code failed")
     finally:
         conn.close()
@@ -180,7 +183,7 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
         return SuccessInfo(msg='Bind sms notification success',
                            data={'phone': data.phone}).to_dict()
     except Exception as e:
-        print(e)
+        default_logger.debug(f'手机号绑定餐厅短信通知失败-{e}')
         raise HTTPException(status_code=400, detail="Bind sms notification failed")
     finally:
         conn.close()
@@ -238,13 +241,10 @@ def send_verification_code(phone: str, code: str, timeout: int = 5):
     """
     发送短信验证码
     """
-
-    return 'aaa'
-
-    # return send_tencent_sms(
-    #     appid='1400647289',
-    #     sign_name='XMU智能点餐',
-    #     template_id='1344135',
-    #     template_params=[str(code), str(timeout)],
-    #     phone_list=[str(phone)]
-    # )
+    return send_tencent_sms(
+        appid='1400647289',
+        sign_name='XMU智能点餐',
+        template_id='1344135',
+        template_params=[str(code), str(timeout)],
+        phone_list=[str(phone)]
+    )
