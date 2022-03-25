@@ -52,7 +52,7 @@ class Logger:
                    level=level.name,
                    format="[{time:YYYY-MM-DD HH:mm:ss}][{level}]: {message}",
                    encoding="utf-8",
-                   rotation="1:00",
+                   rotation="01:00",
                    retention="30 days",
                    filter=lambda x: log_name == x['extra']['__log_name'])
 

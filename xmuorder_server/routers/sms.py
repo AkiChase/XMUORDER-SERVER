@@ -16,6 +16,7 @@ from ..common import SuccessInfo, XMUORDERException
 from ..config import GlobalSettings
 from ..database import Mysql
 from ..logger import Logger
+from ..scheduler import Scheduler
 
 router = APIRouter()
 default_logger: Logger
@@ -52,6 +53,9 @@ async def __init():
     #   获取默认日志
     global default_logger
     default_logger = Logger.get_logger('默认日志')
+    #   添加任务
+    Scheduler.add(clear_phone_verification_task, job_name='清空验证码数据',
+                  trigger='cron', hour="2", minute="0", second='0')
 
 
 @router.post("/send")
@@ -254,3 +258,19 @@ def send_verification_code(phone: str, code: str, timeout: int = 5):
         template_params=[str(code), str(timeout)],
         phone_list=[str(phone)]
     )
+
+
+def clear_phone_verification_task(job_name: str):
+    """
+    定时任务，清理过期验证码，重置剩余验证码次数
+    """
+    try:
+        sql1 = 'DELETE FROM phone_verification WHERE NOW() > expiration;'
+        sql2 = 'UPDATE phone_verification SET sendTimes = 0 WHERE sendTimes!=0;'
+        with Mysql.connect() as conn:
+            Mysql.execute_only(conn, sql1)
+            Mysql.execute_only(conn, sql2)
+            conn.commit()
+        default_logger.success(f'定时任务[{job_name}]已完成')
+    except Exception as e:
+        default_logger.error(f'定时任务[{job_name}]发生错误:{e}')

@@ -33,6 +33,12 @@ class Scheduler:
         if job_name in cls.job_dict:
             raise Exception(f"the job with name '{job_name}' already exists")
 
+        #   附加job_name参数
+        if 'kwargs' not in kwargs:
+            kwargs['kwargs'] = {'job_name': job_name}
+        elif 'job_name' not in kwargs['kwargs']:
+            kwargs['kwargs']['job_name'] = job_name
+
         cls.job_dict[job_name] = cls.scheduler.add_job(func=func, **kwargs)
         default_logger.info(f'定时任务[{job_name}]已添加, 当前任务数量:{len(cls.job_dict)}')
 
