@@ -12,8 +12,7 @@ from ..logger import Logger
 from ..security import AES
 
 router = APIRouter()
-#   获取默认日志
-default_logger: Logger = Logger.get_logger('默认日志')
+default_logger: Logger
 
 
 class BindModel(BaseModel):
@@ -32,6 +31,13 @@ class LoginModel(BaseModel):
     """
     uid: str
     ts: str
+
+
+@router.on_event("startup")
+async def __init():
+    #   获取默认日志
+    global default_logger
+    default_logger = Logger.get_logger('默认日志')
 
 
 @router.post("/bind")

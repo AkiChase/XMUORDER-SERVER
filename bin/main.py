@@ -16,7 +16,7 @@ app = FastAPI()
 
 
 @app.on_event("startup")
-async def init():
+async def __init():
     #   logger初始化
     Logger.set_working_dir(os.path.abspath(os.path.join(__file__, '../../log')))
     #   添加自定义logger
@@ -37,7 +37,7 @@ async def init():
     #   scheduler初始化
     Scheduler.init()
     #   添加任务
-    # Scheduler.add(test, job_name='测试', trigger='cron', hour="20", minute="54", second='45')
+    Scheduler.add(lambda: print('测试'), job_name='测试', trigger='cron', hour="20", minute="54", second='45')
 
 
 @app.get('/')

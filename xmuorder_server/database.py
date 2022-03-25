@@ -8,6 +8,9 @@ from .logger import Logger
 数据库相关 连接池及部分操作封装
 """
 
+#   默认日志
+default_logger: Logger
+
 
 class Mysql:
     pool: PooledDB  # 数据库连接池
@@ -15,7 +18,9 @@ class Mysql:
     @classmethod
     def init(cls, database_host: str, database_port: int, database_user: str, database_password: str,
              database_name: str, **ignore):
-        Logger.get_logger('默认日志').debug(f'{len(ignore)}个多余参数已忽略')
+        global default_logger
+        default_logger = Logger.get_logger('默认日志')
+
         cls.pool = PooledDB(
             creator=pymysql,  # 使用链接数据库的模块
             maxconnections=10,  # 连接池允许的最大连接数，0和None表示不限制连接数
@@ -35,17 +40,14 @@ class Mysql:
             database=database_name,
             charset='utf8'
         )
-        Logger.get_logger('默认日志').info('Mysql连接池已开启')
-
-        def f():
-            Mysql.close()
-
-        atexit.register(f)
+        default_logger.info('Mysql连接池已开启')
+        #   注册句柄，程序退出时自动断开Mysql连接
+        atexit.register(lambda: Mysql.close())
 
     @classmethod
     def close(cls):
         cls.pool.close()
-        Logger.get_logger('默认日志').info('Mysql连接已断开')
+        default_logger.info('Mysql连接已断开')
 
     @classmethod
     def connect(cls) -> pymysql.connections.Connection:

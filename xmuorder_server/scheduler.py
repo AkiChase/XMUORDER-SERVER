@@ -1,4 +1,10 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.job import Job
+
+from .logger import Logger
+
+#   默认日志
+default_logger: Logger
 
 
 class Scheduler:
@@ -12,6 +18,9 @@ class Scheduler:
     def init(cls):
         cls.scheduler = AsyncIOScheduler(timezone='Asia/Shanghai')
         cls.scheduler.start()
+        global default_logger
+        default_logger = Logger.get_logger('默认日志')
+        default_logger.info('定时任务服务已开启')
 
     @classmethod
     def add(cls, func: callable, job_name: str, **kwargs):
@@ -25,3 +34,16 @@ class Scheduler:
             raise Exception(f"the job with name '{job_name}' already exists")
 
         cls.job_dict[job_name] = cls.scheduler.add_job(func=func, **kwargs)
+        default_logger.info(f'定时任务[{job_name}]已添加, 当前任务数量:{len(cls.job_dict)}')
+
+    @classmethod
+    def remove(cls, job_name: str):
+        """
+        移除任务，同时删除 job_dict 中键值对
+        """
+        if job_name not in cls.job_dict:
+            raise Exception(f"the job with name '{job_name}' doesn't exist")
+        job: Job = cls.job_dict[job_name]
+        job.remove()
+        del cls.job_dict[job_name]
+        default_logger.info(f'定时任务[{job_name}]已移除, 当前任务数量:{len(cls.job_dict)}')

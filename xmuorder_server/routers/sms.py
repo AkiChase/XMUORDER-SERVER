@@ -18,8 +18,7 @@ from ..database import Mysql
 from ..logger import Logger
 
 router = APIRouter()
-#   获取默认日志
-default_logger: Logger = Logger.get_logger('默认日志')
+default_logger: Logger
 
 
 class SendSmsModel(BaseModel):
@@ -46,6 +45,13 @@ class BindCanteenSmsModel(BaseModel):
     cName: str
     phone: str
     sms_code: str
+
+
+@router.on_event("startup")
+async def __init():
+    #   获取默认日志
+    global default_logger
+    default_logger = Logger.get_logger('默认日志')
 
 
 @router.post("/send")
