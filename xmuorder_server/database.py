@@ -2,11 +2,14 @@ import pymysql
 from dbutils.pooled_db import PooledDB
 import atexit
 
+from .logger import Logger
+
 """
-数据库相关
-1. 数据库连接池及相关函数封装
-...
+数据库相关 连接池及部分操作封装
 """
+
+#   当前模块日志
+logger: Logger
 
 
 class Mysql:
@@ -15,7 +18,9 @@ class Mysql:
     @classmethod
     def init(cls, database_host: str, database_port: int, database_user: str, database_password: str,
              database_name: str, **ignore):
-        print(f'{len(ignore)}个多余参数已忽略')
+        global logger
+        logger = Logger('数据库模块')
+
         cls.pool = PooledDB(
             creator=pymysql,  # 使用链接数据库的模块
             maxconnections=10,  # 连接池允许的最大连接数，0和None表示不限制连接数
@@ -35,17 +40,14 @@ class Mysql:
             database=database_name,
             charset='utf8'
         )
-        print('mysql连接池已开启')
-
-        def f():
-            Mysql.close()
-
-        atexit.register(f)
+        logger.info('Mysql连接池已开启')
+        #   注册句柄，程序退出时自动断开Mysql连接
+        atexit.register(lambda: Mysql.close())
 
     @classmethod
     def close(cls):
         cls.pool.close()
-        print('mysql连接已断开')
+        logger.info('Mysql连接已断开')
 
     @classmethod
     def connect(cls) -> pymysql.connections.Connection:
