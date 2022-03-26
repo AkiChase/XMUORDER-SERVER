@@ -87,7 +87,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
 
         session.close()
 
-        logger.success("{name}:{id} 绑定成功!", name=info['name'], id=info['user_id'])
+        logger.success(f"{info['name']}:{info['user_id']} 绑定成功!")
         return SuccessInfo('bind success', data={
             'name': info['name'],
             'college': info['college'],
@@ -96,7 +96,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
         }).to_dict()
 
     except Exception as e:
-        logger.debug(f'XMU绑定失败-{e}')
+        logger.debug(f'绑定失败-{e}')
         session.close()
         raise HTTPException(status_code=400, detail=ErrorInfo('bind failed').to_dict())
 
@@ -112,11 +112,11 @@ async def xmu_login(data: LoginModel, verify=Depends(dependencies.code_verify_ae
         openid = AES.decrypt_aes(key, iv, en_src=data.uid)
 
         user_data = read_info(openid)
-        logger.success("{name}:{id} 获取本地信息成功!", name=user_data['name'], id=user_data['user_id'])
+        logger.success(f"{user_data['name']}:{user_data['user_id']} 获取本地信息成功!")
         return SuccessInfo('login success', data=user_data).to_dict()
 
     except Exception as e:
-        logger.debug(f'XMU读取本地信息失败-{e}')
+        logger.debug(f'读取本地用户信息失败-{e}')
         raise HTTPException(status_code=400, detail=ErrorInfo('login failed').to_dict())
 
 

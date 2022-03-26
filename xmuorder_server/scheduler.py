@@ -21,7 +21,7 @@ class Scheduler:
         cls.scheduler.start()
         global logger
         logger = Logger('定时任务模块')
-        logger.info('定时任务服务已开启')
+        logger.info('服务已开启')
 
     @classmethod
     def add(cls, func: callable, job_name: str, **kwargs):

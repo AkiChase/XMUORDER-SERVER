@@ -92,7 +92,7 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
                            data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except Exception as e:
-        logger.debug(f'sms发送商家通知短信失败-{e}')
+        logger.debug(f'发送商家通知短信失败-{e}')
         raise HTTPException(status_code=400, detail="Message sending failed")
     finally:
         conn.close()
@@ -150,10 +150,10 @@ async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends
                            data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except XMUORDERException as e:
-        logger.debug(f'sms发送验证码短信失败-{e}')
+        logger.debug(f'发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail=e.msg)
     except Exception as e:
-        logger.debug(f'sms发送验证码短信失败-{e}')
+        logger.debug(f'发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail="send phone verification code failed")
     finally:
         conn.close()
@@ -190,7 +190,7 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
         Mysql.execute_only(conn, sql, cID=data.cID, name=data.cName, phone=data.phone)
         conn.commit()
 
-        logger.success(f'[短信服务]绑定餐厅短信通知成功-phone:{data.phone}')
+        logger.success(f'绑定餐厅短信通知成功-phone:{data.phone}')
         return SuccessInfo(msg='Bind sms notification success',
                            data={'phone': data.phone}).to_dict()
     except Exception as e:
