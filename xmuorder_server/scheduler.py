@@ -1,10 +1,11 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.job import Job
 
+from .database import Mysql
 from .logger import Logger
 
-#   默认日志
-default_logger: Logger
+#   当前模块日志
+logger: Logger
 
 
 class Scheduler:
@@ -18,9 +19,9 @@ class Scheduler:
     def init(cls):
         cls.scheduler = AsyncIOScheduler(timezone='Asia/Shanghai')
         cls.scheduler.start()
-        global default_logger
-        default_logger = Logger.get_logger('默认日志')
-        default_logger.info('定时任务服务已开启')
+        global logger
+        logger = Logger('定时任务模块')
+        logger.info('定时任务服务已开启')
 
     @classmethod
     def add(cls, func: callable, job_name: str, **kwargs):
@@ -40,7 +41,7 @@ class Scheduler:
             kwargs['kwargs']['job_name'] = job_name
 
         cls.job_dict[job_name] = cls.scheduler.add_job(func=func, **kwargs)
-        default_logger.info(f'定时任务[{job_name}]已添加, 当前任务数量:{len(cls.job_dict)}')
+        logger.info(f'定时任务[{job_name}]已添加, 当前任务数量:{len(cls.job_dict)}')
 
     @classmethod
     def remove(cls, job_name: str):
@@ -52,4 +53,22 @@ class Scheduler:
         job: Job = cls.job_dict[job_name]
         job.remove()
         del cls.job_dict[job_name]
-        default_logger.info(f'定时任务[{job_name}]已移除, 当前任务数量:{len(cls.job_dict)}')
+        logger.info(f'定时任务[{job_name}]已移除, 当前任务数量:{len(cls.job_dict)}')
+
+
+class Task:
+    @staticmethod
+    def clear_phone_verification_task(job_name: str):
+        """
+        定时任务，清理过期验证码，重置剩余验证码次数
+        """
+        try:
+            sql1 = 'DELETE FROM phone_verification WHERE NOW() > expiration;'
+            sql2 = 'UPDATE phone_verification SET sendTimes = 0 WHERE sendTimes!=0;'
+            with Mysql.connect() as conn:
+                Mysql.execute_only(conn, sql1)
+                Mysql.execute_only(conn, sql2)
+                conn.commit()
+            logger.success(f'定时任务[{job_name}]已完成')
+        except Exception as e:
+            logger.error(f'定时任务[{job_name}]发生错误:{e}')

@@ -16,10 +16,10 @@ from ..common import SuccessInfo, XMUORDERException
 from ..config import GlobalSettings
 from ..database import Mysql
 from ..logger import Logger
-from ..scheduler import Scheduler
+from ..scheduler import Scheduler, Task
 
 router = APIRouter()
-default_logger: Logger
+logger: Logger
 
 
 class SendSmsModel(BaseModel):
@@ -51,10 +51,10 @@ class BindCanteenSmsModel(BaseModel):
 @router.on_event("startup")
 async def __init():
     #   获取默认日志
-    global default_logger
-    default_logger = Logger.get_logger('默认日志')
+    global logger
+    logger = Logger('短信模块')
     #   添加任务
-    Scheduler.add(clear_phone_verification_task, job_name='清空验证码数据',
+    Scheduler.add(Task.clear_phone_verification_task, job_name='清空验证码数据',
                   trigger='cron', hour="2", minute="0", second='0')
 
 
@@ -92,7 +92,7 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
                            data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except Exception as e:
-        default_logger.debug(f'sms发送商家通知短信失败-{e}')
+        logger.debug(f'sms发送商家通知短信失败-{e}')
         raise HTTPException(status_code=400, detail="Message sending failed")
     finally:
         conn.close()
@@ -145,15 +145,15 @@ async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends
 
         # return SuccessInfo(msg='Verification code request success',
         #                    data={'SendStatusSet': res}).to_dict()
-
+        logger.debug(f'验证码发送成功-phone:{data.phone}')
         return SuccessInfo(msg='Verification code request success',
                            data={'SendStatusSet': res.SendStatusSet}).to_dict()
 
     except XMUORDERException as e:
-        default_logger.debug(f'sms发送验证码短信失败-{e}')
+        logger.debug(f'sms发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail=e.msg)
     except Exception as e:
-        default_logger.debug(f'sms发送验证码短信失败-{e}')
+        logger.debug(f'sms发送验证码短信失败-{e}')
         raise HTTPException(status_code=400, detail="send phone verification code failed")
     finally:
         conn.close()
@@ -190,10 +190,11 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
         Mysql.execute_only(conn, sql, cID=data.cID, name=data.cName, phone=data.phone)
         conn.commit()
 
+        logger.success(f'[短信服务]绑定餐厅短信通知成功-phone:{data.phone}')
         return SuccessInfo(msg='Bind sms notification success',
                            data={'phone': data.phone}).to_dict()
     except Exception as e:
-        default_logger.debug(f'手机号绑定餐厅短信通知失败-{e}')
+        logger.debug(f'手机号绑定餐厅短信通知失败-{e}')
         raise HTTPException(status_code=400, detail="Bind sms notification failed")
     finally:
         conn.close()
@@ -258,19 +259,3 @@ def send_verification_code(phone: str, code: str, timeout: int = 5):
         template_params=[str(code), str(timeout)],
         phone_list=[str(phone)]
     )
-
-
-def clear_phone_verification_task(job_name: str):
-    """
-    定时任务，清理过期验证码，重置剩余验证码次数
-    """
-    try:
-        sql1 = 'DELETE FROM phone_verification WHERE NOW() > expiration;'
-        sql2 = 'UPDATE phone_verification SET sendTimes = 0 WHERE sendTimes!=0;'
-        with Mysql.connect() as conn:
-            Mysql.execute_only(conn, sql1)
-            Mysql.execute_only(conn, sql2)
-            conn.commit()
-        default_logger.success(f'定时任务[{job_name}]已完成')
-    except Exception as e:
-        default_logger.error(f'定时任务[{job_name}]发生错误:{e}')

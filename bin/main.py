@@ -18,9 +18,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def __init():
     #   logger初始化
-    Logger.set_working_dir(os.path.abspath(os.path.join(__file__, '../../log')))
-    #   添加自定义logger
-    Logger('默认日志', level=Logger.Level.SUCCESS)
+    Logger.init(os.path.abspath(os.path.join(__file__, '../../log/日志.log')))
 
     #   短信相关 路由
     app.include_router(sms.router, prefix="/sms")

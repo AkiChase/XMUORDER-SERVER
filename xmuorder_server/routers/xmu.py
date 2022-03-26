@@ -12,7 +12,7 @@ from ..logger import Logger
 from ..security import AES
 
 router = APIRouter()
-default_logger: Logger
+logger: Logger
 
 
 class BindModel(BaseModel):
@@ -36,8 +36,8 @@ class LoginModel(BaseModel):
 @router.on_event("startup")
 async def __init():
     #   获取默认日志
-    global default_logger
-    default_logger = Logger.get_logger('默认日志')
+    global logger
+    logger = Logger('XMU模块')
 
 
 @router.post("/bind")
@@ -87,7 +87,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
 
         session.close()
 
-        default_logger.success("{name}:{id} 绑定成功!", name=info['name'], id=info['user_id'])
+        logger.success("{name}:{id} 绑定成功!", name=info['name'], id=info['user_id'])
         return SuccessInfo('bind success', data={
             'name': info['name'],
             'college': info['college'],
@@ -96,7 +96,7 @@ async def xmu_bind(data: BindModel, verify=Depends(dependencies.code_verify_aes_
         }).to_dict()
 
     except Exception as e:
-        default_logger.debug(f'XMU绑定失败-{e}')
+        logger.debug(f'XMU绑定失败-{e}')
         session.close()
         raise HTTPException(status_code=400, detail=ErrorInfo('bind failed').to_dict())
 
@@ -112,11 +112,11 @@ async def xmu_login(data: LoginModel, verify=Depends(dependencies.code_verify_ae
         openid = AES.decrypt_aes(key, iv, en_src=data.uid)
 
         user_data = read_info(openid)
-        default_logger.success("{name}:{id} 获取本地信息成功!", name=user_data['name'], id=user_data['user_id'])
+        logger.success("{name}:{id} 获取本地信息成功!", name=user_data['name'], id=user_data['user_id'])
         return SuccessInfo('login success', data=user_data).to_dict()
 
     except Exception as e:
-        default_logger.debug(f'XMU读取本地信息失败-{e}')
+        logger.debug(f'XMU读取本地信息失败-{e}')
         raise HTTPException(status_code=400, detail=ErrorInfo('login failed').to_dict())
 
 
