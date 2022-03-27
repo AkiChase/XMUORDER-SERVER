@@ -4,6 +4,7 @@ from fastapi import FastAPI
 import sys
 import os
 
+
 sys.path.append(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0])
 
 from xmuorder_server import config
@@ -11,6 +12,8 @@ from xmuorder_server.database import Mysql
 from xmuorder_server.routers import sms, xmu
 from xmuorder_server.logger import Logger
 from xmuorder_server.scheduler import Scheduler
+from xmuorder_server.weixin import WeiXin, Database
+
 
 app = FastAPI()
 
@@ -32,13 +35,16 @@ async def __init():
     #   Mysql连接
     Mysql.init(**settings.dict())
 
+    #   微信模块初始化
+    WeiXin.init()
+
     #   scheduler初始化, router模块需要的任务在模块__init中添加
     Scheduler.init()
 
 
 @app.get('/')
 async def hello_world():
-    return 'Hello world'
+    return 'hello world'
 
 
 if __name__ == "__main__":
