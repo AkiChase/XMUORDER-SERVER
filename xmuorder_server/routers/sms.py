@@ -48,6 +48,21 @@ class BindCanteenSmsModel(BaseModel):
     sms_code: str
 
 
+class GetCanteenBindPhoneModel(BaseModel):
+    """
+    获取餐厅绑定通知手机号模板
+    """
+    cID: str
+
+
+class RemoveCanteenBindPhoneModel(BaseModel):
+    """
+    移除餐厅绑定的某个手机号
+    """
+    cID: str
+    phone: str
+
+
 @router.on_event("startup")
 async def __init():
     #   获取默认日志
@@ -58,8 +73,8 @@ async def __init():
                   trigger='cron', hour="2", minute="0", second='0')
 
 
-@router.post("/send")
-async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_aes_depend)):
+@router.post("/sendCanteenNotice")
+async def send_canteen_notice(data: SendSmsModel, verify=Depends(dependencies.code_verify_aes_depend)):
     conn = Mysql.connect()
     try:
         cid_list = [f"'{x}'" for x in data.cID_list]
@@ -79,6 +94,8 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
 
         res = Mysql.execute_fetchall(conn, sql=sql)
         phone_list = set([line[1] for line in res if line[1] is not None])
+        if len(phone_list) == 0:
+            raise XMUORDERException('匹配的phone列表为空')
 
         #   更新 lastSendMsgTime
         sql = f'''
@@ -101,18 +118,21 @@ async def send_sms(data: SendSmsModel, verify=Depends(dependencies.code_verify_a
 
 @router.post("/phoneVerificationCode")
 async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends(dependencies.code_verify_aes_depend)):
+    """
+    发送验证码
+    """
     conn = Mysql.connect()
     try:
         # 再次简单核验电话号码，防止注入等问题
-        if re.match(r'\+861\d{10}', data.phone) is None:
-            raise XMUORDERException(f'phone:{data.phone}格式错误')
+        if re.match(r'^\+86[1][34578][0-9]{9}$', data.phone) is None:
+            raise XMUORDERException(f'phone:{data.phone}不是正确的手机号码')
 
         # 验证码
         code = str(random.randint(100000, 999999))
 
         sql = '''
         select phone, code, expiration, lastSendTime, sendTimes
-        from phone_verification where phone=%(phone)s
+        from phone_verification where phone=%(phone)s;
         '''
         res = Mysql.execute_fetchone(conn, sql, phone=data.phone)
         if res is None:
@@ -161,13 +181,65 @@ async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends
         conn.close()
 
 
-@router.post("/bind")
+@router.post("/removeCanteenBindPhone")
+async def remove_canteen_bind_phone_list(data: RemoveCanteenBindPhoneModel,
+                                         verify=Depends(dependencies.code_verify_aes_depend)):
+    """
+    移除餐厅绑定的某个手机号
+    """
+    conn = Mysql.connect()
+    try:
+        sql = '''
+        delete from phone where cID=%(cID)s and phone=%(phone)s;
+        '''
+        Mysql.execute_only(conn, sql, cID=data.cID, phone=data.phone)
+        logger.success(f'移除餐厅绑定的手机号成功\t phone-{data.phone} cID-{data.cID}')
+        return SuccessInfo(msg='remove phone from canteen success')
+
+    except Exception as e:
+        logger.debug(f'移除餐厅绑定的手机号失败\t phone-{data.phone} cID-{data.cID}\t{e}')
+        raise HTTPException(status_code=400, detail="remove phone from canteen failed")
+    finally:
+        conn.close()
+
+
+@router.post("/getCanteenBindPhone")
+async def get_canteen_bind_phone_list(data: GetCanteenBindPhoneModel,
+                                      verify=Depends(dependencies.code_verify_aes_depend)):
+    """
+    获取餐厅绑定的手机号
+    """
+    conn = Mysql.connect()
+    try:
+        sql = '''
+        select phone from phone where cID=%(cID)s;
+        '''
+        res = Mysql.execute_fetchall(conn, sql, cID=data.cID)
+        return SuccessInfo(msg='get phone list success',
+                           data={'phone': (x[0] for x in res)}).to_dict()
+
+    except Exception as e:
+        logger.debug(f'获取餐厅绑定的手机号失败-cID={data.cID}\t{e}')
+        raise HTTPException(status_code=400, detail="get phones of canteen failed")
+    finally:
+        conn.close()
+
+
+@router.post("/bindCanteen")
 async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencies.code_verify_aes_depend)):
     conn = Mysql.connect()
     try:
         # 再次简单核验电话号码，防止注入等问题
-        if re.match(r'\+861\d{10}', data.phone) is None:
-            raise XMUORDERException(f'phone:{data.phone}格式错误')
+        if re.match(r'^\+86[1][34578][0-9]{9}$', data.phone) is None:
+            raise XMUORDERException(f'phone:{data.phone}不是正确的手机号码')
+
+        sql = 'select phone from phone where cID=%(cID)s;'
+        res = Mysql.execute_fetchall(conn, sql, cID=data.cID)
+        if len(res) >= 3:
+            raise XMUORDERException(f'cID-{data.cID} 餐厅可绑定号码数已达上限')
+        for x in res:
+            if x[0] == data.phone:
+                raise XMUORDERException(f'phone-{data.phone} 号码已绑定')
 
         sql = '''
         select phone, code, expiration from phone_verification
