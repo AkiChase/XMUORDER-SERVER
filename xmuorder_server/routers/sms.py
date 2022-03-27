@@ -176,7 +176,7 @@ async def phone_verification_code(data: SmsVerificationCodeModel, verify=Depends
         raise HTTPException(status_code=400, detail=e.msg)
     except Exception as e:
         logger.debug(f'发送验证码短信失败-phone:{data.phone}\t{e}')
-        raise HTTPException(status_code=400, detail="send phone verification code failed")
+        raise HTTPException(status_code=400, detail="发送短信验证码失败")
     finally:
         conn.close()
 
@@ -231,15 +231,15 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
     try:
         # 再次简单核验电话号码，防止注入等问题
         if re.match(r'^\+86[1][34578][0-9]{9}$', data.phone) is None:
-            raise XMUORDERException(f'phone:{data.phone}不是正确的手机号码')
+            raise XMUORDERException({'detail': '此号码不是正确的手机号码', 'data': data.phone})
 
         sql = 'select phone from phone where cID=%(cID)s;'
         res = Mysql.execute_fetchall(conn, sql, cID=data.cID)
         if len(res) >= 3:
-            raise XMUORDERException(f'cID-{data.cID} 餐厅可绑定号码数已达上限')
+            raise XMUORDERException({'detail': '餐厅可绑定号码数已达上限', 'data': data.cID})
         for x in res:
             if x[0] == data.phone:
-                raise XMUORDERException(f'phone-{data.phone} 号码已绑定')
+                raise XMUORDERException({'detail': '此号码已绑定', 'data': data.phone})
 
         sql = '''
         select phone, code, expiration from phone_verification
@@ -248,15 +248,15 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
         res: tuple[str, str, datetime] = Mysql.execute_fetchone(conn, sql, phone=data.phone)
         # 无号码记录
         if res is None:
-            raise XMUORDERException(f'phone:{data.phone} 不存在验证码记录')
+            raise XMUORDERException(['此号码未发送验证码', data.phone])
 
         # 验证码过期
         if datetime.now() > res[2]:
-            raise XMUORDERException(f'phone:{data.phone} 验证码已过期')
+            raise XMUORDERException(['验证码已过期', data.phone])
 
         # 验证码错误
         if res[1] != data.sms_code:
-            raise XMUORDERException(f'phone:{data.phone} 验证码错误')
+            raise XMUORDERException(['验证码错误', data.phone])
 
         sql1 = '''
         # 更新、或添加此号码所在餐厅
@@ -277,9 +277,13 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
         logger.success(f'绑定餐厅短信通知成功-phone:{data.phone}')
         return SuccessInfo(msg='Bind sms notification success',
                            data={'phone': data.phone}).to_dict()
+
+    except XMUORDERException as e:
+        logger.debug(f'餐厅绑定手机号失败 {e.msg}')
+        raise HTTPException(status_code=400, detail=e.msg[0])
     except Exception as e:
-        logger.debug(f'手机号绑定餐厅短信通知失败 {e}')
-        raise HTTPException(status_code=400, detail="Bind sms notification failed")
+        logger.debug(f'餐厅绑定手机号失败 {e}')
+        raise HTTPException(status_code=400, detail="餐厅绑定手机号失败")
     finally:
         conn.close()
 
