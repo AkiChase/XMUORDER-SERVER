@@ -5,6 +5,7 @@
 ...
 """
 import base64
+import time
 from typing import Optional
 
 from Crypto.Cipher import AES as _AES
@@ -32,9 +33,13 @@ def code_verify_aes(code: str, ts: str) -> bool:
     :return: bool
     """
     try:
-        key = 'ord' + ts[0:11] + 'er_'
-        iv = 're_' + ts[0:11] + 'dro'
-        return AES.encrypt_aes(key=key, iv=iv, src=ts) == code
+        now = int(time.time())
+        if 0 <= (now - int(ts)) <= 30:
+            key = 'ord' + ts[0:10] + 'er_'
+            iv = 're_' + ts[0:10] + 'dro'
+            return AES.encrypt_aes(key=key, iv=iv, src=ts) == code
+        else:
+            return False
     except:
         return False
 
