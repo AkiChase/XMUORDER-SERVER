@@ -37,10 +37,11 @@ def code_verify_aes(code: str, ts: str) -> bool:
         if 0 <= (now - int(ts)) <= 30:
             key = 'ord' + ts[0:10] + 'er_'
             iv = 're_' + ts[0:10] + 'dro'
-            return AES.encrypt_aes(key=key, iv=iv, src=ts) == code
+            new_code = AES.encrypt_aes(key=key, iv=iv, src=ts)
+            return new_code == code
         else:
             return False
-    except:
+    except Exception as e:
         return False
 
 

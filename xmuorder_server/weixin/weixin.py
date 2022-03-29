@@ -25,7 +25,6 @@ class WeiXin:
         logger = Logger('微信模块')
 
         #   读取密钥环境等
-        config.GlobalSettings.init(_env_file='../../.env')
         global_setting = config.GlobalSettings.get()
         cls.app_id = global_setting.app_id
         cls.app_secret = global_setting.app_secret
