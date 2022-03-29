@@ -11,7 +11,7 @@ from xmuorder_server.database import Mysql
 from xmuorder_server.routers import sms, xmu
 from xmuorder_server.logger import Logger
 from xmuorder_server.scheduler import Scheduler
-from xmuorder_server.weixin import WeiXin
+from xmuorder_server.weixin.weixin import WeiXin
 
 app = FastAPI()
 
