@@ -89,17 +89,11 @@ class OrderStatistics:
         aggregate().match({{'orderInfo.orderState': 'SUCCESS', 'payInfo.tradeState': 'SUCCESS',
         'goodsInfo.shopInfo.cID':'{cid}',
         'orderInfo.timeInfo.confirmTime':_.and(_.gte('{begin_date + '0000'}'), _.lte('{end_date + '2400'}'))
-        }})
-        %%skip_limit_words%%
-        '''
+        }})'''
+
         query += '''
-        .project({'goodsInfo': 1,'payInfo.feeInfo': 1})
-        .addFields({foodIDs: $.reduce({input: '$goodsInfo.record',initialValue: []
-        ,in: $.concatArrays(['$$value',['$$this._id']]),})})
-        .lookup({let: {foodIDs: '$foodIDs'},from: 'food',pipeline: $.pipeline()
-        .match(_.expr($.in(['$_id', '$$foodIDs']))).project({typeName: 1})
-        .done(),as: 'foodInfo'})
-        .project({foodIDs: 0,_id: 0}).end()
+        %%skip_limit_words%%
+        .replaceRoot({newRoot: {record: '$goodsInfo.record',}}).end()
         '''
 
         #   查询
@@ -120,20 +114,20 @@ class OrderStatistics:
         try:
             for record in orders_list:
                 record_dict = json.loads(record)
-                for index, data in enumerate(record_dict['foodInfo']):
+                for index, data in enumerate(record_dict['record']):
                     #   计算
-                    temp = record_dict['goodsInfo']['record'][index]
-                    price = Decimal(temp['num']['$numberInt']) * Decimal(temp['price']['$numberDouble'])
-                    num = int(temp['num']['$numberInt'])
+                    num = int(data['num']['$numberInt'])
+                    price = num * Decimal(data['price']['$numberDouble'])
+                    type_name = data['typeName']
                     #   记录
-                    if data['typeName'] not in out_dict.keys():
-                        out_dict[data['typeName']] = {
+                    if type_name not in out_dict.keys():
+                        out_dict[type_name] = {
                             'income': price,
                             'salesAmount': num
                         }
                     else:
-                        out_dict[data['typeName']]['income'] += price
-                        out_dict[data['typeName']]['salesAmount'] += num
+                        out_dict[type_name]['income'] += price
+                        out_dict[type_name]['salesAmount'] += num
             return out_dict
         except Exception as e:
             raise XMUORDERException(('根据类别计算商品价格失败', e))
