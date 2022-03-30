@@ -59,3 +59,13 @@ class XMUORDERException(Exception):
 
     def __str__(self):
         return self.msg
+
+
+class WithMsgException(Exception):
+    """
+    面向api接口附加错误消息的自定义类型
+    """
+
+    def __init__(self, msg: str, data=None):
+        self.msg = msg
+        self.data = data

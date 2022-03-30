@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from .. import dependencies
 from ..logger import Logger
 from ..weixin.database import Database
-from ..common import XMUORDERException
+from ..common import XMUORDERException, WithMsgException
 
 from decimal import Decimal
 import json
@@ -20,6 +20,7 @@ class OrderStatisticsModel(BaseModel):
     订单统计接口
     """
     cID: str
+    begin_date: str
     end_date: str
 
 
@@ -36,17 +37,25 @@ async def order_info(data: OrderStatisticsModel, verify=Depends(dependencies.cod
     统计订单的营业额、销量等信息
     """
     try:
+        if data.begin_date > data.end_date:
+            raise WithMsgException('统计的起始日期大于终止日期')
+
         out = {
             'success': True,
             'cID': data.cID,
-            'endTime': data.end_date + '0000'
+            'beginTime': data.begin_date + '0000',
+            'endTime': data.end_date + '2400'
         }
 
-        order_data = OrderStatistics.get_order_data(cid=data.cID, end_date=data.end_date)
+        order_data = OrderStatistics.get_order_data(cid=data.cID, begin_date=data.begin_date, end_date=data.end_date)
         cal_dict = OrderStatistics.cal_by_class(order_data)
         out['data'] = [{'typeName': k, **v} for k, v in cal_dict.items()]
 
         return out
+    except WithMsgException as e:
+        logger.error(f'[订单统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
+        raise HTTPException(status_code=400, detail=e.msg)
+
     except Exception as e:
         logger.error(f'[订单统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
         raise HTTPException(status_code=400, detail="订单统计失败")
@@ -58,7 +67,7 @@ class OrderStatistics:
     """
 
     @staticmethod
-    def get_order_data(cid: str, end_date: str) -> list[str]:
+    def get_order_data(cid: str, begin_date: str, end_date: str) -> list[str]:
         """
         获取订单数据库内容，同步分页循环获取，返回list[json]
         """
@@ -68,7 +77,7 @@ class OrderStatistics:
         where({{
             'orderInfo.orderState': 'SUCCESS', 'payInfo.tradeState': 'SUCCESS',
             'goodsInfo.shopInfo.cID':'{cid}',
-            'orderInfo.timeInfo.confirmTime':_.gte('{end_date + '0000'}')
+            'orderInfo.timeInfo.confirmTime': _.and(_.gte('{begin_date + '0000'}'), _.lt('{end_date + '2400'}'))
         }}).count()
         '''
         total_count = Database.count('orders', count_query)['count']
@@ -79,7 +88,8 @@ class OrderStatistics:
         query = f'''
         aggregate().match({{'orderInfo.orderState': 'SUCCESS', 'payInfo.tradeState': 'SUCCESS',
         'goodsInfo.shopInfo.cID':'{cid}',
-        'orderInfo.timeInfo.confirmTime':_.gte('{end_date + '0000'}')}})
+        'orderInfo.timeInfo.confirmTime':_.and(_.gte('{begin_date + '0000'}'), _.lte('{end_date + '2400'}'))
+        }})
         %%skip_limit_words%%
         '''
         query += '''
