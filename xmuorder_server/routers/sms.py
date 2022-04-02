@@ -111,7 +111,7 @@ async def send_canteen_notice(data: SendSmsModel, verify=Depends(dependencies.co
 
     except Exception as e:
         logger.debug(f'发送商家通知短信失败-{e}')
-        raise HTTPException(status_code=400, detail="Message sending failed")
+        raise HTTPException(status_code=400, detail="订单通知短信发送失败")
     finally:
         conn.close()
 
@@ -231,15 +231,15 @@ async def bind_canteen_sms(data: BindCanteenSmsModel, verify=Depends(dependencie
     try:
         # 再次简单核验电话号码，防止注入等问题
         if re.match(r'^\+86[1][34578][0-9]{9}$', data.phone) is None:
-            raise XMUORDERException({'detail': '此号码不是正确的手机号码', 'data': data.phone})
+            raise XMUORDERException(['此号码不是正确的手机号码', data.phone])
 
         sql = 'select phone from phone where cID=%(cID)s;'
         res = Mysql.execute_fetchall(conn, sql, cID=data.cID)
         if len(res) >= 3:
-            raise XMUORDERException({'detail': '餐厅可绑定号码数已达上限', 'data': data.cID})
+            raise XMUORDERException(['餐厅可绑定号码数已达上限', data.cID])
         for x in res:
             if x[0] == data.phone:
-                raise XMUORDERException({'detail': '此号码已绑定', 'data': data.phone})
+                raise XMUORDERException(['此号码已绑定', data.phone])
 
         sql = '''
         select phone, code, expiration from phone_verification
