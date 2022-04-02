@@ -15,11 +15,20 @@ router = APIRouter()
 logger: Logger
 
 
-class OrderStatisticsModel(BaseModel):
+class ShopStatisticsModel(BaseModel):
     """
-    订单统计接口
+    商店统计接口模版
     """
     cID: str
+    begin_date: str
+    end_date: str
+
+
+class RiderStatisticsModel(BaseModel):
+    """
+    骑手配送统计接口模板
+    """
+    rider_id: str
     begin_date: str
     end_date: str
 
@@ -31,8 +40,8 @@ async def __init():
     logger = Logger('统计模块')
 
 
-@router.post("/orderInfo")
-async def order_info(data: OrderStatisticsModel, verify=Depends(dependencies.code_verify_aes_depend)):
+@router.post("/shopInfo")
+async def shop_info(data: ShopStatisticsModel, verify=Depends(dependencies.code_verify_aes_depend)):
     """
     统计订单的营业额、销量等信息
     """
@@ -53,12 +62,72 @@ async def order_info(data: OrderStatisticsModel, verify=Depends(dependencies.cod
 
         return out
     except WithMsgException as e:
-        logger.error(f'[订单统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
+        logger.error(f'[商店统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
         raise HTTPException(status_code=400, detail=e.msg)
 
     except Exception as e:
-        logger.error(f'[订单统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
-        raise HTTPException(status_code=400, detail="订单统计失败")
+        logger.error(f'[商店统计]-{e}-cID:{data.cID} -endData:{data.end_date}')
+        raise HTTPException(status_code=400, detail="商店统计失败")
+
+
+@router.post("/riderInfo")
+async def rider_info(data: RiderStatisticsModel, verify=Depends(dependencies.code_verify_aes_depend)):
+    """
+    统计骑手的配送费信息
+    """
+    try:
+        if data.begin_date > data.end_date:
+            raise WithMsgException('统计的起始日期大于终止日期')
+
+        out = {
+            'success': True,
+            'beginTime': data.begin_date + '0000',
+            'endTime': data.end_date + '2400'
+        }
+
+        rider_data = RiderStatistics.get_rider_data(rider_id=data.rider_id, begin_date=data.begin_date,
+                                                    end_date=data.end_date)
+        out_data = []
+        for x in rider_data['data']:
+            group = json.loads(x)
+            out_data.append({'shopName': group['_id'],
+                             'totalFee': int(float(group['totalFee']['$numberDouble'])) / 100,
+                             'count': int(group['count']['$numberInt'])})
+        out['data'] = out_data
+        return out
+    except WithMsgException as e:
+        logger.error(f'[骑手统计]-{e}-openid:{data.rider_id} -endData:{data.end_date}')
+        raise HTTPException(status_code=400, detail=e.msg)
+
+    except Exception as e:
+        logger.error(f'[骑手统计]-{e}-openid:{data.rider_id} -endData:{data.end_date}')
+        raise HTTPException(status_code=400, detail="骑手统计失败")
+
+
+class RiderStatistics:
+    """
+    骑手收入统计
+    """
+
+    @staticmethod
+    def get_rider_data(rider_id: str, begin_date: str, end_date: str) -> dict:
+        """
+        获取骑手配送统计信息
+        """
+        query = f'''
+            aggregate().match({{'orderInfo.orderState': 'SUCCESS', 'deliverInfo.isDelivered': true,
+            'deliverInfo.id':'{rider_id}',
+            'orderInfo.timeInfo.confirmTime':_.and(_.gte('{begin_date + '0000'}'), _.lte('{end_date + '2400'}'))
+        }})'''
+
+        query += '''
+            .replaceRoot({newRoot: {rider_id: '$deliverInfo.id', shop: '$goodsInfo.shopInfo.name',
+              feeInfo: '$payInfo.feeInfo', _count: 1}})
+            .group({_id: '$shop', totalFee: $.sum('$feeInfo.deliverFee'), count: $.sum('$_count')}).end()
+        '''
+        res = Database.aggregate('orders', query)
+
+        return res
 
 
 class OrderStatistics:
@@ -69,7 +138,7 @@ class OrderStatistics:
     @staticmethod
     def get_order_data(cid: str, begin_date: str, end_date: str) -> list[str]:
         """
-        获取订单数据库内容，同步分页循环获取，返回list[json]
+        获取商家统计订单数据库内容，同步分页循环获取，返回list[json]
         """
 
         #   分页
