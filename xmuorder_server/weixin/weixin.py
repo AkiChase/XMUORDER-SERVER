@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import requests
 
-from .. import config
+from ..config import GlobalSettings
 from ..common import XMUORDERException
 from ..logger import Logger
 
@@ -25,8 +25,7 @@ class WeiXin:
         logger = Logger('微信模块')
 
         #   读取密钥环境等
-        config.GlobalSettings.init(_env_file='../../.env')
-        global_setting = config.GlobalSettings.get()
+        global_setting = GlobalSettings.get()
         cls.app_id = global_setting.app_id
         cls.app_secret = global_setting.app_secret
         cls.app_env = global_setting.app_env

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     app_id: str
     app_secret: str
     app_env: str
+    printer_user: str
+    printer_key: str
 
     class Config:
         extra = "ignore"

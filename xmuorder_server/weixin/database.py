@@ -1,14 +1,13 @@
 import requests
 
-from xmuorder_server.common import XMUORDERException
-from xmuorder_server.weixin.weixin import WeiXin
+from ..common import XMUORDERException
+from ..weixin.weixin import WeiXin
 
 
 class Database:
     """
     数据库相关操作封装
     """
-    WeiXin.init()
 
     @staticmethod
     def __request(url: str, post_data: dict, **kwargs) -> dict:
