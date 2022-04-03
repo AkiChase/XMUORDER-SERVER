@@ -1,5 +1,3 @@
-import json
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.job import Job
 

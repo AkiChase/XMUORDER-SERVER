@@ -8,7 +8,7 @@ sys.path.append(os.path.split(os.path.abspath(os.path.dirname(__file__)))[0])
 
 from xmuorder_server import config
 from xmuorder_server.database import Mysql
-from xmuorder_server.routers import sms, xmu, statistics, printer
+from xmuorder_server.routers import sms, xmu, statistics, printer, update
 from xmuorder_server.logger import Logger
 from xmuorder_server.scheduler import Scheduler
 from xmuorder_server.weixin.weixin import WeiXin
@@ -32,6 +32,8 @@ async def __init():
     #   微信模块初始化
     WeiXin.init()
 
+    #   刷新数据库 路由
+    app.include_router(update.router, prefix="/update")
     #   短信相关 路由
     app.include_router(sms.router, prefix="/sms")
     #   xmu绑定 路由
