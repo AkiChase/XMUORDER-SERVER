@@ -22,11 +22,11 @@ async def update_canteen_table(verify=Depends(dependencies.code_verify_aes_depen
     """
     try:
         UpdateDataBase.update_canteen_table()
-        logger.debug(f'表 canteen 已刷新')
+        logger.success(f'请求成功 -canteen 已刷新')
         return {
             'success': True,
             'msg': '刷新成功'
         }
     except Exception as e:
-        logger.debug(f'表 canteen 刷新失败 -{e}')
+        logger.error(f'请求失败 -canteen 刷新失败 -{e}')
         raise HTTPException(status_code=400, detail='刷新失败')
