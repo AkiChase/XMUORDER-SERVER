@@ -1,7 +1,5 @@
 from pydantic import BaseSettings
 
-from xmuorder_server.common import ErrorInfo
-
 
 class Settings(BaseSettings):
     database_host: str
@@ -38,5 +36,5 @@ class GlobalSettings:
         :return:
         """
         if cls.settings is None:
-            raise Exception(ErrorInfo("settings not loaded"))
+            raise Exception("settings not loaded")
         return cls.settings

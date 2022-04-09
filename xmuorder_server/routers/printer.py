@@ -549,6 +549,9 @@ class Printer:
         return cls._print_msg(sn, '\n'.join(content))
 
     class LineFormat:
+        """
+        打印内容格式化
+        """
         LINE_WIDTH = 32
 
         @unique
