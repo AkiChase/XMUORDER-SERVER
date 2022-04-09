@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -91,8 +89,8 @@ async def rider_info(data: RiderStatisticsModel, verify=Depends(dependencies.cod
         for x in rider_data['data']:
             group = json.loads(x)
             out_data.append({'shopName': group['_id'],
-                             'totalFee': int(float(group['totalFee']['$numberDouble'])) / 100,
-                             'count': int(group['count']['$numberInt'])})
+                             'totalFee': int(float(tuple(group['totalFee'].values())[0])) / 100,
+                             'count': int(tuple(group['count'].values())[0])})
         out['data'] = out_data
         return out
     except WithMsgException as e:

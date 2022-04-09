@@ -3,6 +3,7 @@ from apscheduler.job import Job
 
 from .database import Mysql
 from .logger import Logger
+from .weixin.database import UpdateDataBase
 
 #   当前模块日志
 logger: Logger
@@ -22,6 +23,10 @@ class Scheduler:
         global logger
         logger = Logger('定时任务模块')
         logger.info('服务已开启')
+
+        # 同步数据库任务
+        Scheduler.add(Task.refresh_database_task, job_name='同步数据库',
+                      trigger='cron', minute="0", second='0')
 
     @classmethod
     def add(cls, func: callable, job_name: str, **kwargs):
@@ -69,6 +74,17 @@ class Task:
                 Mysql.execute_only(conn, sql1)
                 Mysql.execute_only(conn, sql2)
                 conn.commit()
+            logger.success(f'定时任务[{job_name}]已完成')
+        except Exception as e:
+            logger.error(f'定时任务[{job_name}]发生错误:{e}')
+
+    @staticmethod
+    def refresh_database_task(job_name: str):
+        """
+        定时任务 通过获取微信数据库同步本地mysql数据库
+        """
+        try:
+            UpdateDataBase.update_canteen_table()
             logger.success(f'定时任务[{job_name}]已完成')
         except Exception as e:
             logger.error(f'定时任务[{job_name}]发生错误:{e}')

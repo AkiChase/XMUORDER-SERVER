@@ -72,7 +72,7 @@ class Mysql:
         :param conn: 连接
         :param sql: sql语句
         :param params: sql中占位符对应字典
-        :return: 一条结果
+        :return: 一条结果 无需取[0]
         """
         with Mysql.get_cursor(conn) as cur:
             cur.execute(sql, params)

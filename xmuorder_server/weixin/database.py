@@ -1,6 +1,9 @@
+import json
+
 import requests
 
 from ..common import XMUORDERException
+from ..database import Mysql
 from ..weixin.weixin import WeiXin
 
 
@@ -166,3 +169,41 @@ class Database:
             'collection_name': collection_name
         }
         return cls.__request(url=url, post_data=post_data)
+
+
+class UpdateDataBase:
+    @staticmethod
+    def update_canteen_table():
+        #   分页
+        total_count = Database.count('canteen', 'count()')['count']
+        page_size = 25
+        total_page = int((total_count - 1) / page_size + 1)
+
+        #   构建查询语句
+        query = '''
+         aggregate()
+         %%skip_limit_words%%
+         .replaceRoot({newRoot: {cID: '$cID',name:'$name'}}).end()
+         '''
+
+        #   查询
+        out = []
+        for page_num in range(total_page):
+            new_query = query.replace('%%skip_limit_words%%', f'.skip({page_num * page_size}).limit({page_size})')
+            res = Database.aggregate('canteen', new_query)
+            out += res['data']
+
+        #   用cur.executemany()
+        params = [json.loads(x) for x in out]
+        #   executemany的ON DUPLICATE KEY UPDATE后必须用values(name)来代替%(name)s
+        sql = '''
+         insert into canteen (cID, name)
+             VALUES (%(cID)s, %(name)s)
+         ON DUPLICATE KEY UPDATE
+         name=values(name);
+         '''
+
+        with Mysql.connect() as conn:
+            cur = Mysql.get_cursor(conn)
+            cur.executemany(sql, params)
+            conn.commit()

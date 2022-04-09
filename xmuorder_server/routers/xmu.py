@@ -152,7 +152,8 @@ def store_info(info: dict) -> None:
         user_id=%(user_id)s,
         account=%(account)s, pw=%(pw)s,
         name=%(name)s, college=%(college)s,
-        phone=%(phone)s, grade=%(grade)s;'''
+        phone=%(phone)s, grade=%(grade)s;
+        '''
 
         Mysql.execute_fetchall(conn, sql, **info)
     finally:
