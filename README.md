@@ -1,9 +1,17 @@
 # XMU智能点餐服务端
 ## 1. API部分
 
+
+
 不同的路由模块对应不同的url路径
 
+![image-20220409170950536](https://s2.loli.net/2022/04/09/PoL8Qs4fijq2TGC.png)
+
+
+
 ### 1.1 短信模块
+
+
 
 #### routers/sms.py
 
@@ -29,8 +37,12 @@
 5. `bindCanteen`
 
    绑定指定手机号到指定餐厅
+   
+   
 
 ### 1.2 XMU模块
+
+
 
 #### routers/xmu.py
 
@@ -44,8 +56,12 @@
 2. `login`
 
    读取mysql数据库，返回用户基本信息
+   
+   
 
 ### 1.3 统计模块
+
+
 
 #### routers/statistics.py
 
@@ -59,8 +75,12 @@
 2. `riderInfo`
 
    通过微信数据库，统计骑手的配送费信息
+   
+   
 
 ### 1.4 打印机模块
+
+
 
 #### routers/printer.py
 
@@ -82,6 +102,8 @@
 4. `printOrderNotice`
 
    调用指定餐厅绑定的所有云打印机，打印指定语音提醒（新订单、取消订单、申请退款）
+   
+   
 
 #### `class Printer`
 
@@ -93,11 +115,29 @@
 
 
 
+### 1.5 更新数据库模块模块
+
+
+
+#### routers/update.py
+
+接口列表：
+
+1. `canteen`
+
+   通过微信数据库刷新同步mysql的canteen表
+
+
+
 ## 2. 微信部分
+
+
 
 #### weixin/weixin.py
 
 1. 本地缓存微信**access_token**的维护(调用时若已过期则自动更新)
+
+   
 
 #### weixin/database.py
 
@@ -110,19 +150,28 @@
 
 ## 3. 其他部分
 
+
+
 #### common.py
 
 封装了常用的自定义数据类型，自定义异常
 
+
+
 #### config.py
 
 1. .env配置文件的读取
+
 2. 通过`@classmethod`，实现配置信息全局化(`class GlobalSettings`)
+
+   
 
 #### database.py
 
 1. mysql数据库连接池封装
 2. mysql数据库`execute`封装，通过sql语句**预编译**避免sql注入问题
+
+
 
 #### dependencies.py
 
@@ -131,17 +180,27 @@
 1. 简单验证请求是否合法
 2. 通过AES验证请求是否合法
 
+
+
 #### logger.py
 
 `loguru`二次封装，实现不同名称的`logger`对应不同的消息前缀
 
 不同模块使用不同名称的`logger`，方便日志输出，增强日志的可读性
 
+![img](https://s2.loli.net/2022/04/09/UFml4xSzvBQbCIJ.png)
+
+
+
 #### scheduler.py
 
 `apscheduler`二次封装，封装了添加定时任务和移除定时任务
 
 使用`logger`，为不同定时任务添加前缀，增强可读性
+
+![img](https://s2.loli.net/2022/04/09/8eqhJIilutBNEnj.png)
+
+
 
 #### security.py
 
