@@ -5,6 +5,8 @@
 
 不同的路由模块对应不同的url路径
 
+![image-20220409170950536](https://s2.loli.net/2022/04/09/PoL8Qs4fijq2TGC.png)
+
 
 
 ### 1.1 短信模块
@@ -110,6 +112,20 @@
 
 1. 飞鹅云打印机api接口封装
 2. 根据纸张大小格式化打印内容（`class LineFormat`）
+
+
+
+### 1.5 更新数据库模块模块
+
+
+
+#### routers/update.py
+
+接口列表：
+
+1. `canteen`
+
+   通过微信数据库刷新同步mysql的canteen表
 
 
 
